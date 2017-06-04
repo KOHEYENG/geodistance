@@ -8,6 +8,11 @@ import (
 	"math"
 	"os"
 	"strconv"
+
+	"github.com/gonum/plot"
+	"github.com/gonum/plot/plotter"
+	"github.com/gonum/plot/plotutil"
+	"github.com/gonum/plot/vg"
 )
 
 const (
@@ -22,10 +27,17 @@ type geoPoint struct {
 }
 
 func sphericalTrigonometry(p1 geoPoint, p2 geoPoint) (float64, float64) {
-	return earthRadius * math.Acos((math.Sin(toRad(p1.Latitude))*math.Sin(toRad(p2.Latitude)))+
-			(math.Cos(toRad(p1.Latitude))*math.Cos(toRad(p2.Latitude))*math.Cos(toRad(p2.Longitude-p1.Longitude)))),
-		toDeg(math.Atan2(math.Sin(toRad(p2.Longitude-p1.Longitude)), (math.Cos(toRad(p1.Latitude))*math.Tan(toRad(p2.Latitude)))-
-			(math.Sin(toRad(p1.Latitude))*math.Cos(toRad(p2.Longitude-p1.Longitude)))))
+	var dlong, distance, azimuth float64
+	dlong = p2.Longitude - p1.Longitude
+	distance = earthRadius * math.Acos((math.Sin(toRad(p1.Latitude))*math.Sin(toRad(p2.Latitude)))+
+		(math.Cos(toRad(p1.Latitude))*math.Cos(toRad(p2.Latitude))*math.Cos(toRad(dlong))))
+	azimuth = toDeg(math.Atan2(math.Sin(toRad(dlong)), (math.Cos(toRad(p1.Latitude))*math.Tan(toRad(p2.Latitude)))-
+		(math.Sin(toRad(p1.Latitude))*math.Cos(toRad(dlong)))))
+	if azimuth < 0 {
+		azimuth = 360 + azimuth
+	}
+
+	return distance, azimuth
 }
 
 func hubenyFormula(p1 geoPoint, p2 geoPoint) (float64, float64) {
@@ -92,6 +104,59 @@ func openFile(filePath string) []float64 {
 	return lines
 }
 
+func plotPoints(list []float64) plotter.XYs {
+	pts := make(plotter.XYs, len(list))
+	for i := range pts {
+		pts[i].X = float64(i)
+		pts[i].Y = list[i]
+	}
+	return pts
+}
+
+func plotDist(stdist, hfdist []float64) {
+	p, err := plot.New()
+	if err != nil {
+		panic(err)
+	}
+
+	p.Title.Text = "Distance between 2 points"
+	p.X.Label.Text = "X"
+	p.Y.Label.Text = "Distance [km]"
+
+	err = plotutil.AddLinePoints(p,
+		"SphericalTrigonometry", plotPoints(stdist),
+		"hubenyFormula", plotPoints(hfdist))
+	if err != nil {
+		panic(err)
+	}
+
+	if err := p.Save(8*vg.Inch, 8*vg.Inch, "distance.png"); err != nil {
+		panic(err)
+	}
+}
+
+func plotAz(staz, hfaz []float64) {
+	p, err := plot.New()
+	if err != nil {
+		panic(err)
+	}
+
+	p.Title.Text = "Azimuth between 2 points"
+	p.X.Label.Text = "X"
+	p.Y.Label.Text = "Azimuth [°]"
+
+	err = plotutil.AddLinePoints(p,
+		"SphericalTrigonometry", plotPoints(staz),
+		"hubenyFormula", plotPoints(hfaz))
+	if err != nil {
+		panic(err)
+	}
+
+	if err := p.Save(8*vg.Inch, 8*vg.Inch, "azimuth.png"); err != nil {
+		panic(err)
+	}
+}
+
 func main() {
 	f := openLog()
 	defer f.Close()
@@ -116,5 +181,6 @@ func main() {
 		fmt.Println("Hubenyの公式 距離：", hf, "km 方位角：", az2)
 		fmt.Println("距離差異：", math.Abs(st-hf), "km 方位角差異：", math.Abs(az1-az2))
 	}
-
+	plotDist(stdist, hfdist)
+	plotAz(staz, hfaz)
 }
