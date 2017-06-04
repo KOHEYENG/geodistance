@@ -169,10 +169,10 @@ func main() {
 		p2 := geoPoint{lines[i+2], lines[i+3]}
 
 		st, az1 := sphericalTrigonometry(p1, p2)
-		hf, az2 := hubenyFormula(p1, p2)
-
 		stdist = append(stdist, st)
 		staz = append(staz, az1)
+
+		hf, az2 := hubenyFormula(p1, p2)
 		hfdist = append(hfdist, hf)
 		hfaz = append(hfaz, az2)
 
