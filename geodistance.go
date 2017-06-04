@@ -176,7 +176,7 @@ func main() {
 		hfdist = append(hfdist, hf)
 		hfaz = append(hfaz, az2)
 
-		fmt.Println("始点：", p1, "終点：", p2)
+		fmt.Println("\n", "始点：", p1, "終点：", p2)
 		fmt.Println("球面三角法 距離：", st, "km 方位角：", az1)
 		fmt.Println("Hubenyの公式 距離：", hf, "km 方位角：", az2)
 		fmt.Println("距離差異：", math.Abs(st-hf), "km 方位角差異：", math.Abs(az1-az2))
