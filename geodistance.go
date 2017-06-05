@@ -27,6 +27,38 @@ type geoPoint struct {
 	Longitude float64
 }
 
+func main() {
+	e := openErrorLog()
+	r := openResult()
+	defer e.Close()
+	defer r.Close()
+	writer := bufio.NewWriter(r)
+
+	lines := openLocationFile("./location.csv")
+	var stdist, staz, hfdist, hfaz []float64
+
+	for i := 0; i < len(lines)-2; i += 2 {
+		p1 := geoPoint{lines[i], lines[i+1]}
+		p2 := geoPoint{lines[i+2], lines[i+3]}
+
+		st, az1 := sphericalTrigonometry(p1, p2)
+		stdist = append(stdist, st)
+		staz = append(staz, az1)
+
+		hf, az2 := hubenyFormula(p1, p2)
+		hfdist = append(hfdist, hf)
+		hfaz = append(hfaz, az2)
+
+		fmt.Fprintln(writer, "\n", "始点：", p1, "終点：", p2)
+		fmt.Fprintln(writer, "球面三角法 距離：", st, "km 方位角：", az1)
+		fmt.Fprintln(writer, "Hubenyの公式 距離：", hf, "km 方位角：", az2)
+		fmt.Fprintln(writer, "距離差異：", math.Abs(st-hf), "km 方位角差異：", math.Abs(az1-az2))
+	}
+	writer.Flush()
+	plotDist(stdist, hfdist)
+	plotAz(staz, hfaz)
+}
+
 func sphericalTrigonometry(p1 geoPoint, p2 geoPoint) (float64, float64) {
 	var dlong, distance, azimuth float64
 	dlong = p2.Longitude - p1.Longitude
@@ -165,36 +197,4 @@ func plotAz(staz, hfaz []float64) {
 	if err := p.Save(8*vg.Inch, 8*vg.Inch, "azimuth.png"); err != nil {
 		log.Panic(err)
 	}
-}
-
-func main() {
-	e := openErrorLog()
-	f := openResult()
-	defer e.Close()
-	defer f.Close()
-	writer := bufio.NewWriter(f)
-
-	lines := openLocationFile("./location.csv")
-	var stdist, staz, hfdist, hfaz []float64
-
-	for i := 0; i < len(lines)-2; i += 2 {
-		p1 := geoPoint{lines[i], lines[i+1]}
-		p2 := geoPoint{lines[i+2], lines[i+3]}
-
-		st, az1 := sphericalTrigonometry(p1, p2)
-		stdist = append(stdist, st)
-		staz = append(staz, az1)
-
-		hf, az2 := hubenyFormula(p1, p2)
-		hfdist = append(hfdist, hf)
-		hfaz = append(hfaz, az2)
-
-		fmt.Fprintln(writer, "\n", "始点：", p1, "終点：", p2)
-		fmt.Fprintln(writer, "球面三角法 距離：", st, "km 方位角：", az1)
-		fmt.Fprintln(writer, "Hubenyの公式 距離：", hf, "km 方位角：", az2)
-		fmt.Fprintln(writer, "距離差異：", math.Abs(st-hf), "km 方位角差異：", math.Abs(az1-az2))
-	}
-	writer.Flush()
-	plotDist(stdist, hfdist)
-	plotAz(staz, hfaz)
 }
