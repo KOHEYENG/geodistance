@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -66,10 +67,10 @@ func (p *geoPoint) toRad() {
 	toRad(p.Longitude)
 }
 
-func openLog() *os.File {
-	logfile, err := os.OpenFile("./geodistance.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+func openErrorLog() *os.File {
+	logfile, err := os.OpenFile("./error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		panic("cannot open test.log:" + err.Error())
+		panic("cannot open error.log:" + err.Error())
 	}
 
 	log.SetOutput(io.MultiWriter(logfile, os.Stdout))
@@ -78,7 +79,16 @@ func openLog() *os.File {
 	return logfile
 }
 
-func openFile(filePath string) []float64 {
+func openResult() *os.File {
+	logfile, err := os.OpenFile("./result.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Panic("cannot open result.txt:" + err.Error())
+	}
+
+	return logfile
+}
+
+func openLocationFile(filePath string) []float64 {
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal("error opning locationfile")
@@ -116,7 +126,7 @@ func plotPoints(list []float64) plotter.XYs {
 func plotDist(stdist, hfdist []float64) {
 	p, err := plot.New()
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	p.Title.Text = "Distance between 2 points"
@@ -127,18 +137,18 @@ func plotDist(stdist, hfdist []float64) {
 		"SphericalTrigonometry", plotPoints(stdist),
 		"hubenyFormula", plotPoints(hfdist))
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	if err := p.Save(8*vg.Inch, 8*vg.Inch, "distance.png"); err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 }
 
 func plotAz(staz, hfaz []float64) {
 	p, err := plot.New()
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	p.Title.Text = "Azimuth between 2 points"
@@ -149,19 +159,22 @@ func plotAz(staz, hfaz []float64) {
 		"SphericalTrigonometry", plotPoints(staz),
 		"hubenyFormula", plotPoints(hfaz))
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	if err := p.Save(8*vg.Inch, 8*vg.Inch, "azimuth.png"); err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 }
 
 func main() {
-	f := openLog()
+	e := openErrorLog()
+	f := openResult()
+	defer e.Close()
 	defer f.Close()
+	writer := bufio.NewWriter(f)
 
-	lines := openFile("./location.csv")
+	lines := openLocationFile("./location.csv")
 	var stdist, staz, hfdist, hfaz []float64
 
 	for i := 0; i < len(lines)-2; i += 2 {
@@ -176,11 +189,12 @@ func main() {
 		hfdist = append(hfdist, hf)
 		hfaz = append(hfaz, az2)
 
-		fmt.Println("\n", "始点：", p1, "終点：", p2)
-		fmt.Println("球面三角法 距離：", st, "km 方位角：", az1)
-		fmt.Println("Hubenyの公式 距離：", hf, "km 方位角：", az2)
-		fmt.Println("距離差異：", math.Abs(st-hf), "km 方位角差異：", math.Abs(az1-az2))
+		fmt.Fprintln(writer, "\n", "始点：", p1, "終点：", p2)
+		fmt.Fprintln(writer, "球面三角法 距離：", st, "km 方位角：", az1)
+		fmt.Fprintln(writer, "Hubenyの公式 距離：", hf, "km 方位角：", az2)
+		fmt.Fprintln(writer, "距離差異：", math.Abs(st-hf), "km 方位角差異：", math.Abs(az1-az2))
 	}
+	writer.Flush()
 	plotDist(stdist, hfdist)
 	plotAz(staz, hfaz)
 }
