@@ -50,9 +50,9 @@ func main() {
 		hfaz = append(hfaz, az2)
 
 		fmt.Fprintln(writer, "\n", "始点：", p1, "終点：", p2)
-		fmt.Fprintln(writer, "球面三角法 距離：", st, "km 方位角：", az1)
-		fmt.Fprintln(writer, "Hubenyの公式 距離：", hf, "km 方位角：", az2)
-		fmt.Fprintln(writer, "距離差異：", math.Abs(st-hf), "km 方位角差異：", math.Abs(az1-az2))
+		fmt.Fprintln(writer, "球面三角法 距離：", strconv.FormatFloat(st, 'f', 4, 64), "km 方位角：", strconv.FormatFloat(az1, 'f', 4, 64))
+		fmt.Fprintln(writer, "Hubenyの公式 距離：", strconv.FormatFloat(hf, 'f', 4, 64), "km 方位角：", strconv.FormatFloat(az2, 'f', 4, 64))
+		fmt.Fprintln(writer, "距離差異：", strconv.FormatFloat(math.Abs(st-hf), 'f', 4, 64), "km 方位角差異：", strconv.FormatFloat(math.Abs(az1-az2), 'f', 4, 64))
 	}
 	writer.Flush()
 	plotDist(stdist, hfdist)
